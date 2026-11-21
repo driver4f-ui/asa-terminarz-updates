@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 from urllib.parse import quote
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 STAGING_MANIFEST = "https://udbqsvsrbybuedqwchks.supabase.co/functions/v1/asa-terminarz-updates"
@@ -97,6 +98,29 @@ def main() -> None:
         "ASA-Terminarz-Windows.exe", f"ASA-Terminarz-Setup-v{version}.exe"
     }:
         raise RuntimeError("Missing expected files")
+    # Skip already published immutable versions before downloading ~110 MB.
+    # This check makes the scheduled workflow cheap and avoids replacing live assets.
+    release_url = (
+        "https://api.github.com/repos/driver4f-ui/asa-terminarz-updates"
+        "/releases/tags/" + quote("terminarz-v" + version)
+    )
+    try:
+        release = fetch_json(release_url)
+    except HTTPError as exc:
+        if exc.code != 404:
+            raise
+        release = None
+    if release is not None:
+        published = {asset.get("name") for asset in release.get("assets", [])}
+        required = {
+            "ASA-Terminarz-Windows.exe",
+            "ASA-Terminarz-Windows.exe.sha256",
+            f"ASA-Terminarz-Setup-v{version}.exe",
+            f"ASA-Terminarz-Setup-v{version}.exe.sha256",
+        }
+        if required.issubset(published):
+            print("Release already published; no download or re-upload:", version)
+            return
     for asset in files:
         unpack(asset, version)
     if "GITHUB_OUTPUT" in os.environ:
