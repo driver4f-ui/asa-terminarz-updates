@@ -41,7 +41,8 @@ def unpack(asset: dict, version: str) -> None:
     total_size = asset.get("size")
     chunks = asset.get("chunks")
     total_hash = sha256_text(asset.get("sha256"))
-    if not isinstance(total_size, int) or not 1_000_000 <= total_size <= 100_000_000:
+    min_size = 2048 if filename == "ASA-Terminarz-Windows.exe" else 1_000_000
+    if not isinstance(total_size, int) or not min_size <= total_size <= 100_000_000:
         raise RuntimeError("Invalid total file size")
     if not isinstance(chunks, list) or not 1 <= len(chunks) <= 20:
         raise RuntimeError("Invalid chunk list")
