@@ -1,0 +1,51 @@
+name: ASA - Terminarz | publiczny kanal aktualizacji
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/release_from_staging.py'
+      - '.github/workflows/publish.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: asa-terminarz-public-releases
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobierz konfiguracje kanalu aktualizacji
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Pobierz i sprawdz sumy kontrolne EXE i instalatora
+        id: staged
+        run: python3 scripts/release_from_staging.py
+      - name: Publikuj oficjalne GitHub Releases
+        if: steps.staged.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.staged.outputs.version }}
+          GH_REPO: driver4f-ui/asa-terminarz-updates
+        run: |
+          set -euo pipefail
+          tag="terminarz-v${VERSION}"
+          if gh release view "$tag" --repo "$GH_REPO" >/dev/null 2>&1; then
+            echo "Release already exists; verifying/uploading complete assets."
+            gh release upload "$tag" release/*.exe release/*.sha256 --clobber --repo "$GH_REPO"
+          else
+            gh release create "$tag" release/*.exe release/*.sha256 \
+              --repo "$GH_REPO" \
+              --target main \
+              --title "ASA - Terminarz v${VERSION}" \
+              --notes "Oficjalna wersja programu ASA - Terminarz Windows. Instalator i EXE zsumowane SHA-256. Kod strony ASA Workshop pozostaje prywatny." \
+              --latest
+          fi
+          echo "Public release: https://github.com/$GH_REPO/releases/tag/$tag"
