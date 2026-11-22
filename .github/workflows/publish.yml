@@ -1,4 +1,4 @@
-# Verified ASA Terminarz v1.2.27: packaged PostgreSQL client for backup without additional installation
+# Verified ASA Terminarz v1.2.28: Info dashboard and PostgreSQL export removed; calendar snapshots retained
 # Public releases contain binaries and checksums only. Private source is not published.
 # Public release 1.2.5: publish verified notifications update
 name: ASA - Terminarz | publiczny kanal aktualizacji
