@@ -30,6 +30,8 @@ jobs:
           persist-credentials: false
       - name: Pobierz i sprawdz sumy kontrolne EXE i instalatora
         id: staged
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: python3 scripts/release_from_staging.py
       - name: Publikuj oficjalne GitHub Releases
         if: steps.staged.outputs.version != ''

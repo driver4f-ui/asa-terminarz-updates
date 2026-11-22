@@ -26,7 +26,15 @@ def sha256_text(value: object) -> str:
     return value
 
 def fetch_json(url: str) -> dict:
-    with urlopen(Request(url, headers={"Cache-Control":"no-cache","Accept":"application/json"}), timeout=40) as resp:
+    headers = {"Cache-Control": "no-cache", "Accept": "application/json"}
+    # GitHub Actions runners have low shared anonymous rate limits. Authenticate
+    # ONLY requests to the exact GitHub API host using the job's GITHUB_TOKEN.
+    # Never forward a GitHub token to Supabase staging or any other domain.
+    if url.startswith("https://api.github.com/"):
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+        if token:
+            headers["Authorization"] = "Bearer " + token
+    with urlopen(Request(url, headers=headers), timeout=40) as resp:
         value = json.load(resp)
     if not isinstance(value, dict):
         raise RuntimeError("Invalid release manifest")
